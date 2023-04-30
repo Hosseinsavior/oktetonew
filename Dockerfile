@@ -9,4 +9,4 @@ COPY main.sh /usr/local/mysql/
 
 RUN chmod a+x /usr/local/mysql/main.sh
 
-CMD ["bash","main.sh"]
+CMD bash /usr/local/mysql/main.sh
