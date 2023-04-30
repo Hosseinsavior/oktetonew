@@ -1087,65 +1087,65 @@ raw="{
 
 set_REALITY_steal() {
     echo 
-    [ -z /usr/local/bin/xray ] && red " Please install Xray first! " && exit 1
-     red "Will overwrite existing Xray settings!"
-     read -p "Enter anything to continue, press ctrl + c to exit" rubbish
-     echo
-     echo -e "Please enter the borrowed website/ip, default ${BLUE} dl.google.com${PLAIN}: "
-     read -p "" forwardSite
-     [ -z "$forwardSite" ] && forwardSite="dl.google.com"
-     echo -e "Current borrowing site: ${GREEN} $forwardSite${PLAIN}"
-     echo
-     echo -e " Please enter the ${BLUE} sni ${PLAIN} of the borrowing site (the default is the same as the borrowing site): "
+    [ -z /usr/local/bin/xray ] && red " 请先安装 Xray！" && exit 1
+    red " 会覆盖现有的 Xray 设置！"
+    read -p " 输入任意内容继续，按 ctrl + c 退出" rubbish
+    echo
+    echo -e " 请输入借用 网站/ip，默认 ${BLUE} dl.google.com${PLAIN}: "
+    read -p "" forwardSite
+    [ -z "$forwardSite" ] && forwardSite="dl.google.com"
+    echo -e " 当前借用网站: ${GREEN} $forwardSite${PLAIN}"
+    echo
+    echo -e " 请输入借用网站的 ${BLUE} sni ${PLAIN} (默认与借用网站相同): "
     read -p "" domain
     [ -z "$domain" ] && domain=$forwardSite
-    echo -e " ${BLUE} sni for current borrowing site: $domain${PLAIN}"
-     echo
-     echo -e "Please enter target website ${BLUE} port ${PLAIN} (default 443): "
-     read -p "" forwardPort
-     [ -z "$forwardPort" ] && forwardPort=443
-     echo -e "Current target port: ${BLUE}$port${PLAIN}"
-     echo
-     red "Start testing: "
+    echo -e " 当前借用网站的 ${BLUE} sni: $domain${PLAIN}"
+    echo
+    echo -e " 请输入目标网站${BLUE}端口${PLAIN}(默认 443): "
+    read -p "" forwardPort
+    [ -z "$forwardPort" ] && forwardPort=443
+    echo -e " 当前目标端口: ${BLUE}$port${PLAIN}"
+    echo
+    red " 开始测试: "
 
-     # Users are allowed to override validation since the reliability of the test method is not guaranteed.
+    # 由于不保证测试方法的可靠性，所以允许用户无视验证。
 
-     # Specify to use h2 and TLS 1.3 to access the target website and output the status code
-     testTarget1=$(curl --http2 --tlsv1.3 https://${forwardSite}:${forwardPort} -o /dev/null -w "%{http_code}" -s)
-     # 000: Can't connect at all (either the site doesn't connect at all, or it doesn't support TLS 1.3 at all)
-     #444: Error codes for nginx
-     # 505: Unsupported http version (no h2)
-     if [ "$testTarget1" == "000" ] || [ "$testTarget1" == "444" ] || [ "$testTarget1" == "505" ]; then
-         red "The target site does not support TLS 1.3 or h2!"
-         read -p " Press Y to continue anyway：" answer
+    # 指定使用 h2 和 TLS 1.3 访问目标网站并输出状态码
+    testTarget1=$(curl --http2 --tlsv1.3 https://${forwardSite}:${forwardPort} -o /dev/null -w "%{http_code}" -s)
+    # 000：根本无法连接（要么网站根本连不上，要么根本不支持 TLS 1.3）
+    # 444：nginx 的错误码
+    # 505：不支持的 http 版本（无 h2）
+    if [ "$testTarget1" == "000" ] || [ "$testTarget1" == "444" ] || [ "$testTarget1" == "505" ]; then
+        red " 目标网站不支持 TLS 1.3 或 h2!"
+        read -p " 按 Y 仍然继续：" answer
         if [ "$answer" != "Y" ] || [ "$answer" != "y" ]; then
             exit 1
         fi
     else
-        green "target site supports TLS 1.3 and h2"
-     the fi
-     # Tricky problem: openssl s_client must enter anything to continue
-     red "Enter any content to continue! (It is recommended to enter only one a, otherwise there may be strange problems.)"
-     testTarget2=$(openssl s_client -connect ${forwardSite}:${forwardPort} -curves X25519 | grep "Server Temp Key")
-     if [[ $testTarget2 =~ "25519" ]]; then
-         green "The target site supports X25519!"
-     else
-         red "The target site does not support X25519!"
-         yellow "Hint: It may not be allowed, it will be fine if h2 and TLS1.3 can be used"
-         read -p "Press Y to continue anyway:" answer
-         if [ "$answer" != "Y" ] || [ "$answer" != "y" ]; then
-             exit 1
-         the fi
-     the fi
-     echo
-     getPort
-     # If Xray listens to 443 and the port of the target website is also 443, ask whether to forward port 80 to increase camouflage.
-     if [ "$port" == "443" ] && [ "$forwardPort" == "443" ]; then
-         echo
-         green "Currently occupied by port 80: "
-         lsof -i:80 | grep xray -v | grep nginx -v | tail -n +2
-         echo
-         yellow "Do you want to forward port 80?"
+        green " 目标网站支持 TLS 1.3 和 h2"
+    fi
+    # 棘手的问题： openssl s_client 必须输入任意内容才能继续
+    red " 输入任意内容继续！(建议仅输入一个 a，不然可能会有奇奇怪怪的问题。)"
+    testTarget2=$(openssl s_client -connect ${forwardSite}:${forwardPort} -curves X25519 | grep "Server Temp Key")
+    if [[ $testTarget2 =~ "25519" ]]; then
+        green " 目标网站支持 X25519！"
+    else
+        red " 目标网站不支持 X25519！"
+        yellow " 提示：可能不准，如果 h2 和 TLS1.3 能用就行了"
+        read -p " 按 Y 仍然继续：" answer
+        if [ "$answer" != "Y" ] || [ "$answer" != "y" ]; then
+            exit 1
+        fi
+    fi
+    echo
+    getPort
+    # 如果 Xray 监听 443 并且目标网站的端口也是 443,则询问是否转发 80 端口，增加伪装。
+    if [ "$port" == "443" ] && [ "$forwardPort" == "443" ]; then
+        echo
+        green " 当前 80 端口占用: "
+        lsof -i:80 | grep xray -v | grep nginx -v | tail -n +2
+        echo
+        yellow " 是否转发 80 端口?"
         read -p " (Y/n)" answer
         if [ "$answer" == "n" ] || [ "$answer" == "N" ]; then
             DokodemoDoorPort=$(shuf -i10000-65000 -n1)
@@ -1157,30 +1157,30 @@ set_REALITY_steal() {
     fi
     echo
     h2Port=$(shuf -i10000-65000 -n1)
-    red " Check the required port occupancy: "
-     lsof -i :$port | grep xray -v | grep nginx -v | tail -n +2
-     lsof -i :$h2Port | grep xray -v | grep nginx -v | tail -n +2
-     yellow "If it is occupied, please use kill [pid] to unoccupy it!"
-     read -p "Continue (Y/n)?" answer
-     if [ "$answer" == "n" ];then
-         exit 0
-     the fi
-     echo
-     getUUID
-     echo
-     echo -e "Current uuid: ${GREEN}$uuid${PLAIN}"
-     echo
+    red " 检测所需端口占用情况: "
+    lsof -i :$port | grep xray -v | grep nginx -v | tail -n +2
+    lsof -i :$h2Port | grep xray -v | grep nginx -v | tail -n +2
+    yellow " 如有占用，请使用 kill [pid] 来解除占用！"
+    read -p " 是否继续(Y/n)?" answer
+    if [ "$answer" == "n" ];then
+        exit 0
+    fi
+    echo
+    getUUID
+    echo
+    echo -e " 当前 uuid: ${GREEN}$uuid${PLAIN}"
+    echo
     
-     getX25519
+    getX25519
 
-     echo
+    echo
     
-     chooseFlow
+    chooseFlow
 
-     getShortID
+    getShortID
 
-     echo
-     red "Start configuring Xray!"
+    echo
+    red " 开始配置 Xray!"
     cat >/usr/local/etc/xray/config.json <<-EOF
 {
     "policy": {
@@ -1293,45 +1293,45 @@ EOF
 }
 
 set_REALITY_own() {
-     [ -z /usr/local/bin/xray ] && red "Please install Xray first!" && exit 1
-     echo
-     yellow "Warning: the original Xray and nginx configuration will be overwritten!"
-     yellow "The default camouflaged website is a 404 page, please replace it yourself if necessary!"
-     echo
-     getPort
-     # 80 port open, more real
-     if [ "$port" == "443" ]; then
-         read -p "Do you want to listen on port 80? (Y/n)" answer
-         if [ "$answer" == "n" ] || [ "$answer" == "N" ]; then
-             httpPort=$(shuf -i10000-65000 -n1)
-             httpListen="127.0.0.1"
-         else
-             httpPort=80
-             httpListen="0.0.0.0"
-         the fi
-     the fi
-     echo
-     getUUID
-     echo
-     getX25519
-     echo
-     getShortID
-     echo
-     configCert
-     echo
-     nginxPort=$(shuf -i10000-65000 -n1)
-     h2Port=$(shuf -i10000-65000 -n1)
-     yellow "Port usage:"
-     lsof -i:$port | grep xray -v | grep nginx -v | tail -n +2
-     lsof -i:$httpPort | grep xray -v | grep nginx -v | tail -n +2
-     lsof -i:$nginxPort | grep xray -v | grep nginx -v | tail -n +2
-     lsof -i:$h2Port | grep xray -v | grep nginx -v | tail -n +2
-     read -p "If it is occupied, please press ctrl + c to exit, if it is not occupied or enforced, please press Enter: " rubbish
-     echo
-     ${PACKAGE_UPDATE[int]}
-     ${PACKAGE_INSTALL[int]} nginx
-     echo
-     yellow " start configuration nginx......"
+    [ -z /usr/local/bin/xray ] && red " 请先安装 Xray！" && exit 1
+    echo
+    yellow " 警告：会覆盖原有的 Xray、nginx 配置！"
+    yellow " 默认的伪装网站为 404 页面，如有需求请自行替换！"
+    echo
+    getPort
+    # 80 端口开放，更真实
+    if [ "$port" == "443" ]; then
+        read -p " 是否监听 80 端口？（Y/n）" answer
+        if [ "$answer" == "n" ] || [ "$answer" == "N" ]; then
+            httpPort=$(shuf -i10000-65000 -n1)
+            httpListen="127.0.0.1"
+        else
+            httpPort=80
+            httpListen="0.0.0.0"
+        fi
+    fi
+    echo
+    getUUID
+    echo
+    getX25519
+    echo
+    getShortID
+    echo
+    configCert
+    echo
+    nginxPort=$(shuf -i10000-65000 -n1)
+    h2Port=$(shuf -i10000-65000 -n1)
+    yellow " 端口占用情况："
+    lsof -i:$port | grep xray -v | grep nginx -v | tail -n +2
+    lsof -i:$httpPort | grep xray -v | grep nginx -v | tail -n +2
+    lsof -i:$nginxPort | grep xray -v | grep nginx -v | tail -n +2
+    lsof -i:$h2Port | grep xray -v | grep nginx -v | tail -n +2
+    read -p " 有占用请 ctrl + c 推出，无占用或强制执行请回车: " rubbish
+    echo
+    ${PACKAGE_UPDATE[int]}
+    ${PACKAGE_INSTALL[int]} nginx
+    echo
+    yellow " 开始配置 nginx......"
     cat >/etc/nginx/nginx.conf <<-EOF
 user root;
 worker_processes auto;
@@ -1491,22 +1491,22 @@ EOF
 
 install_build() {
     echo
-    yellow " Please ensure: "
-     yellow " 1. Install the latest version of golang (可以本设计102 option) 和 git"
-     yellow "2. Voluntarily assume the risk of using the latest version (including various bugs, protocol incompatibilities, etc.)"
-     echo ""
-     read -p "Enter any content to continue, press ctrl + c exit" rubbish
-     echo ""
-     red "3 second cooling period"
-     sleep 3
-     # Clone storage
-     git clone https://github.com/XTLS/Xray-core.git
-     yellow "Compilation is about to start, it may take a long time, please be patient"
-     cd Xray-core && go mod download
-     # Official compilation
-     CGO_ENABLED=0 go build -o xray -trimpath -ldflags "-s -w -buildid=" ./main
-chmod +x xray || {
-red "Xray textب انجام نشد"
+    yellow " 请确保: "
+    yellow " 1. 安装了最新版本的 golang(可使用本脚本102选项) 和 git"
+    yellow "2 . 自愿承担使用最新版本的风险(包括各种各样的bug、协议不适配等问题)"
+    echo ""
+    read -p " 输入任意内容继续，按 ctrl + c 退出" rubbish
+    echo ""
+    red " 3秒冷静期"
+    sleep 3
+    # 克隆储存库
+    git clone https://github.com/XTLS/Xray-core.git
+    yellow " 即将开始编译，可能耗时较久，请耐心等待"
+    cd Xray-core && go mod download
+    # 正式编译
+    CGO_ENABLED=0 go build -o xray -trimpath -ldflags "-s -w -buildid=" ./main
+	chmod +x xray || {
+		red "Xray安装失败"
         cd ..
         rm -rf Xray-core
 		exit 1
@@ -1553,72 +1553,72 @@ red "Xray textب انجام نشد"
     systemctl enable xray.service
 
     echo 
-    yellow " It's finished (confirmed)"
+    yellow " 装完了(确信)"
 }
 
 install_official() {
-# Call the official script to install, too lazy to make wheels
-     update_system
-     echo ""
-     read -p "Do you want to manually specify the Xray version? If you don't specify, the latest stable version will be installed (y/N): " ownVersion
-     if [[ "$ownVersion" == "y" ]]; then
-         # Maybe there is no need to judge whether to enter the version number at all? After all, if the version number is not given, the official script will also report an error
-         read -p " Please enter the installation version (do not start with "v"): " xrayVersion
-         [[ -z "$xrayVersion" ]] && red "Please enter a valid version number!" && exit 1
-         bash -c "$(curl -L -k https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install --version ${xrayVersion} -u root
-     else
-         bash -c "$(curl -L -k https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u root
-     the fi
+# 调用官方脚本安装，懒得造轮子
+    update_system
+    echo ""
+    read -p " 是否手动指定 Xray 版本?不指定将安装最新稳定版(y/N): " ownVersion
+    if [[ "$ownVersion" == "y" ]]; then
+        # 也许根本不需要判断是否输入版本号？毕竟不给版本号，官方脚本也会报错
+        read -p " 请输入安装版本(不要以"v"开头): " xrayVersion
+        [[ -z "$xrayVersion" ]] && red "请输入有效版本号！" && exit 1
+        bash -c "$(curl -L -k https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install --version ${xrayVersion} -u root
+    else
+        bash -c "$(curl -L -k https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u root
+    fi
 }
 
 update_system() {
-     ${PACKAGE_UPDATE[int]}
-     ${PACKAGE_INSTALL[int]} curl wget tar openssl lsof
+    ${PACKAGE_UPDATE[int]}
+    ${PACKAGE_INSTALL[int]} curl wget tar openssl lsof
 }
 
 get_cert() {
-     # https://github.com/tdjnodj/simple-acme
-     bash <(curl -L -k https://github.com/tdjnodj/simple-acme/releases/latest/download/simple-acme.sh)
+    # https://github.com/tdjnodj/simple-acme
+    bash <(curl -L -k https://github.com/tdjnodj/simple-acme/releases/latest/download/simple-acme.sh)
 }
 
 install_go() {
-     ${PACKAGE_INSTALL[int]} git curl
-     # CPU
-     bit=`uname -m`
-     if [[ $bit = x86_64 ]]; then
-         cpu=amd64
-     elif [[ $bit = amd64 ]]; then
-         cpu=amd64
-     elif [[ $bit = aarch64 ]]; then
-         cpu=arm64
-     elif [[ $bit = armv8 ]]; then
-         cpu=arm64
-     elif [[ $bit = armv7 ]]; then
-         cpu=arm64
-     elif [[ $bit = s390x ]]; then
-         cpu=s390x
-     else
-         cpu=$bit
-         red " این مدل ممکن است پشتیبانی نشود( $cpu )'s CPU!"
+    ${PACKAGE_INSTALL[int]} git curl
+    # CPU
+    bit=`uname -m`
+    if [[ $bit = x86_64 ]]; then
+        cpu=amd64
+    elif [[ $bit = amd64 ]]; then
+        cpu=amd64
+    elif [[ $bit = aarch64 ]]; then
+        cpu=arm64
+    elif [[ $bit = armv8 ]]; then
+        cpu=arm64
+    elif [[ $bit = armv7 ]]; then
+        cpu=arm64
+    elif [[ $bit = s390x ]]; then
+        cpu=s390x
+    else 
+        cpu=$bit
+        red " 可能不支持该型号( $cpu )的CPU!"
     fi
     # 获取 go 语言版本
     go_version=$(curl https://go.dev/VERSION?m=text)
-    red " آخرین نسخه فعلیgolang: $go_version"
+    red " 当前最新版本golang: $go_version"
     curl -O -k -L https://go.dev/dl/${go_version}.linux-${cpu}.tar.gz
-    yellow " باز کردن بسته بندی......"
+    yellow " 正在解压......"
     tar -xf go*.linux-${cpu}.tar.gz -C /usr/local/
     sleep 3
     export PATH=\$PATH:/usr/local/go/bin
     rm go*.tar.gz
     echo 'export PATH=\$PATH:/usr/local/go/bin' >> /root/.bash_profile
     source /root/.bash_profile
-    yellow " نسخه فعلی گلانگ را بررسی کنید: "
+    yellow " 检查当前golang版本: "
     go version
-    yellow " برای اطمینان از نصب صحیح، لطفاً به صورت دستی وارد کنید: "
+    yellow " 为确保正常安装，请手动输入: "
     echo "echo 'export PATH=\$PATH:/usr/local/go/bin' >> /root/.bash_profile"
     red "source /root/.bash_profile"
     echo ""
-    echo " اگر اشتباه است، دلایل خطای رایج: موارد قدیمی حذف نشده اندgo"
+    echo " 如果错误，常见错误原因: 未删除旧的go"
 }
 
 # 调用官方脚本
@@ -1632,33 +1632,62 @@ updateGEO() {
 
 showLog() {
     echo ""
-    echo -e " بررسی ${BLUE}دسترسی داشته باشید${PLAIN} وضعیت： cat /var/log/xray/access.log"
-    echo -e " بررسی ${RED}Xray${PLAIN} گزارش خطا： /var/log/xray/error.log"
+    echo -e " 查看 ${BLUE}访问${PLAIN} 情况： cat /var/log/xray/access.log"
+    echo -e " 查看 ${RED}Xray${PLAIN} 报错： /var/log/xray/error.log"
 }
 
 myHelp() {
     echo ""
-    echo -e " bash ${BLUE}${0}${PLAIN} <گزینه ها>"
+    echo -e " bash ${BLUE}${0}${PLAIN} <选项>"
     echo ""
-    yellow "Options:"
-     echo ""
-     echo -e "Open the ${YELLOW}menu${PLAIN} menu"
-     echo -e "${YELLOW}help${PLAIN} View this help"
-     echo -e "${YELLOW}install${PLAIN} Install/update using official xray script"
-     echo -e "${YELLOW}build${PLAIN} compile and install xray"
-     echo -e "${YELLOW}cert${PLAIN} getting tls certificate"
+    yellow " 选项:"
+    echo ""
+    echo -e " ${YELLOW}menu${PLAIN}         打开菜单"
+    echo -e " ${YELLOW}help${PLAIN}         查看本帮助"
+    echo -e " ${YELLOW}install${PLAIN}      使用官方脚本 安装/更新 xray"
+    echo -e " ${YELLOW}build${PLAIN}        编译安装 xray"
+    echo -e " ${YELLOW}cert${PLAIN}         获取 tls 证书"
 }
 
 menu() {
-   
-     random_string=$(tr -dc '[:alnum:]' </dev/urandom | head -c $((RANDOM % 251 + 50)))
-     echo $random_string
-     clear
-     echo -e "${BLUE}Let's Xray!${PLAIN}"
-     echo -e "${RED}Xray${PLAIN} one-click install/config script"
-     echo -e "Project address：${YELLOW}https://github.com/tdjnodj/LetsXray/${PLAIN}"
-     echo""
-    
+    # 为了防止 GFW 根据 ssh 传输数据长度识别你在使用什么脚本
+    # 本脚本会生成一个随机的、包含 50-300 个字符的字符串，来对 ssh 数据长度进行混淆
+    random_string=$(tr -dc '[:alnum:]' </dev/urandom | head -c $((RANDOM % 251 + 50)))
+    echo $random_string
+    clear
+    echo -e " ${BLUE}Let's Xray!${PLAIN}"
+    echo -e " ${RED}Xray${PLAIN} 一键安装/配置脚本"
+    echo -e " 项目地址：${YELLOW}https://github.com/tdjnodj/LetsXray/${PLAIN}"
+    echo ""
+    echo -e " 1. 通过${BLUE}官方脚本${PLAIN} ${YELLOW}安装/更新${YELLOW} ${RED}Xray${PLAIN}"
+    echo -e " 2. ${YELLOW}编译${YELLOW}安装 ${RED}Xray${PLAIN}"
+    echo ""
+    echo " ------------------------------------"
+    echo ""
+    echo -e " 3. 配置 ${RED}Xray${PLAIN}: 无 ${YELLOW}TLS${PLAIN} 的协议"
+    echo -e " 4. 配置 ${RED}Xray${PLAIN}: VLESS + ${GREEN}xtls-rprx-vision${PLAIN} + tls + web"
+    echo -e " 5. ${GREEN}(推荐)${PLAIN}配置 ${RED}Xray${PLAIN}: 用 ${BLUE}REALITY${PLAIN} \"借用\" 别人的证书: ${GREEN}REALITY + xtls-rprx-vision / h2${PLAIN} 共存！"
+    echo -e " 6. ${YELLOW}(推荐)${PLAIN}配置 ${RED}Xray${PLAIN}: 用 ${BLUE}REALITY${PLAIN} 以及自己的证书: ${GREEN}REALITY + xtls-rprx-vision / h2${PLAIN} 共存！"
+    echo ""
+    echo " ------------------------------------"
+    echo -e " 11. 启动 ${RED}Xray${PLAIN}"
+    echo -e " 12. 停止 ${RED}Xray${PLAIN}"
+    echo -e " 13. 设置 ${RED}Xray${PLAIN} 开机自启动"
+    echo -e " 14. 取消 ${RED}Xray${PLAIN} 开机自启动"
+    echo -e " 15. 查看 ${RED}Xray${PLAIN} 运行状态"
+    echo -e " 16. 卸载 ${RED}Xray${PLAIN}"
+    echo -e " 17. 更新 ${BLUE}geo${PLAIN} 资源文件"
+    echo -e " 18. 查看 ${RED}Xray${PLAIN} 日志"
+    echo " ------------------------------------"
+    echo ""
+    yellow " 100. 更新系统和安装依赖"
+    yellow " 101. 申请 TLS 证书(http 申请/自签)"
+    yellow " 102. 安装最新版本的 golang 及 编译 ${RED}Xray${PLAIN} 的其他组件"
+    echo ""
+    echo " ------------------------------------"
+    echo ""
+    yellow " 0. 退出脚本"
+    read -p " 请选择: " answer
     case $answer in
         0) exit 0 ;;
         1) install_official ;;
